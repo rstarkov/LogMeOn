@@ -1,9 +1,10 @@
 # Logmeon.py
 # Copyright (C) 2008 Roman Starkov
 #
-# $Id: $
-# $DateTime: $
+# $Id: //depot/users/rs/Logmeon/Logmeon.py#3 $
+# $DateTime: 2008/08/14 20:22:04 $
 
+import sys
 import subprocess
 from optparse import OptionParser
 
@@ -21,7 +22,7 @@ class LogonConfig():
         self.parser = OptionParser()
 
         self.parser.add_option('-f', '--first-logon',     action="store_true", default=False, help="If set, the script will know it's performing the initial logon")
-        self.parser.add_option('-d', '--debug',           action="store_true", default=False, help="Enables debug mode, printing extra info")
+        self.parser.add_option('-d', '--debug-level',     type="int",          default=0,     help="Enables debug mode LEVEL, printing extra info", metavar="LEVEL")
         self.parser.add_option('-c', '--close-when-done', action="store_true", default=False, help="If set, the script will not wait for user to press Enter upon completion")
 
     #-----------------------------------------------------------------------------
@@ -34,7 +35,7 @@ class LogonConfig():
     #-----------------------------------------------------------------------------
     def Add(self, item):
         self.__items.append(item)
-        item.debug = self.options.debug
+        item.debug_level = self.options.debug_level
 
     #-----------------------------------------------------------------------------
     def Execute(self):
@@ -43,13 +44,27 @@ class LogonConfig():
             sleep(self.initialWait)
         print
 
+        hadErrors = False
         for item in self.__items:
             if item.NeedsExecuting():
-                item.Execute()
+                try:
+                    item.Execute()
+                except Exception, e:
+                    hadErrors = True
+                    print "....ERROR executing action: %s" % str(e)
+                    if self.options.debug_level >= 1:
+                        import traceback
+                        traceback.print_exc(file=sys.stdout)
                 print
 
-        print "Logmeon finished."
-        if not self.options.close_when_done:
+        print
+        if hadErrors:
+            print "Logmeon finished WITH ERRORS :("
+        else:
+            print "Logmeon finished SUCCESSFULLY :)"
+
+        if hadErrors or not self.options.close_when_done:
+            print
             raw_input("Press Enter to exit")
 
 
@@ -111,19 +126,19 @@ class Process:
                                       # running processes will be used.
         self.wait = wait          # seconds to wait after fire-and-forget start
         self.waitDone = waitDone  # if True, will wait for the process to terminate.
-        self.debug = False
+        self.debug_level = 0
 
     #-----------------------------------------------------------------------------
     def NeedsExecuting(self):
         from win32com.client import GetObject
         import re
 
-        if self.debug: print; print
+        if self.debug_level >= 5: print; print
 
         # Construct the regex used to match running processes
         if self.exactMatch:
             rgx = '^' + re.escape(self.cmd) + '$'
-            if self.debug: print "REGEX: " + regex
+            if self.debug_level >= 5: print "REGEX: " + regex
             rgx = re.compile(rgx)
         else:
             cmd = self.cmd.strip().replace('\\', '/')
@@ -139,7 +154,7 @@ class Process:
                 args = '\s+' + re.escape(args).replace('\\ ', '\\s+')
 
             rgx = '^.*?' + re.escape(exe.strip()) + args + '\s*$'
-            if self.debug: print "REGEX: " + rgx
+            if self.debug_level >= 5: print "REGEX: " + rgx
             rgx = re.compile(rgx, re.IGNORECASE)
 
         # Search for this process among the running processes
@@ -150,7 +165,7 @@ class Process:
             if not self.exactMatch:
                 cmdline = cmdline.replace('"', '').replace('\\', '/')
 
-            if self.debug: print "CMDLINE: " + cmdline
+            if self.debug_level >= 5: print "CMDLINE: " + cmdline
             if rgx.match(cmdline):
                 return False
 
