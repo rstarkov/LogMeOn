@@ -1,12 +1,12 @@
 # Logmeon.py
 # Copyright (C) 2008 Roman Starkov
 #
-# $Id: //depot/users/rs/Logmeon/Logmeon.py#4 $
-# $DateTime: 2008/08/16 08:34:01 $
+# $Id: //depot/users/rs/Logmeon/Logmeon.py#5 $
+# $DateTime: 2008/08/16 12:30:58 $
 
 import sys, os, re
 import subprocess
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 #-----------------------------------------------------------------------------
 class LogonConfig():
@@ -22,8 +22,13 @@ class LogonConfig():
         self.parser = OptionParser()
 
         self.parser.add_option('-f', '--first-logon',     action="store_true", default=False, help="If set, the script will know it's performing the initial logon")
-        self.parser.add_option('-d', '--debug-level',     type="int",          default=0,     help="Enables debug mode LEVEL, printing extra info", metavar="LEVEL")
         self.parser.add_option('-c', '--close-when-done', action="store_true", default=False, help="If set, the script will not wait for user to press Enter upon completion")
+
+        debugGroup = OptionGroup(self.parser, "Debugging options")
+        debugGroup.add_option ('-v', '--verbose',         action="store_true", default=False, help="Enables the printing of extra info")
+        debugGroup.add_option ('-d', '--debug-level',     type="int",          default=0,     help="Enables debug mode LEVEL. Any value above 0 also implies --verbose.", metavar="LEVEL")
+
+        self.parser.add_option_group(debugGroup)
 
     #-----------------------------------------------------------------------------
     def ParseArgs(self):
@@ -32,10 +37,16 @@ class LogonConfig():
 
         self.options, self.parameters = self.parser.parse_args()
 
+        if len(self.parameters) > 0:
+            self.parser.error("Unexpected positional arguments supplied. This script doesn't take any.")
+
+        if self.options.debug_level > 0:
+            self.options.verbose = True
+
     #-----------------------------------------------------------------------------
     def Add(self, item):
         self.__items.append(item)
-        item.debug_level = self.options.debug_level
+        item.options = self.options
 
     #-----------------------------------------------------------------------------
     def Execute(self):
@@ -54,7 +65,7 @@ class LogonConfig():
                     print "....ERROR executing action: %s" % str(e)
                     if self.options.debug_level >= 1:
                         import traceback
-                        traceback.print_exc(file=sys.stdout)
+                        print re.compile(r'^', re.MULTILINE).sub('....', traceback.format_exc())
                 print
 
         print
@@ -122,13 +133,12 @@ class Process:
         self.wait = wait           # seconds to wait after fire-and-forget start
         self.useShell = useShell   # if True, command will be executed within the shell
         self.waitDone = waitDone   # if True, will wait for the process to terminate.
-        self.debug_level = 0
 
     #-----------------------------------------------------------------------------
     def NeedsExecuting(self):
         from win32com.client import GetObject
 
-        if self.debug_level >= 5: print; print
+        if self.options.debug_level >= 5: print; print
 
         # Construct the regex used to match running processes
         rgx = '^["\\s]*' + re.escape(self.exefile.replace('\\', '/')) + '["\\s]*'
@@ -136,7 +146,7 @@ class Process:
             rgx += '\\s+' + re.escape(self.args.replace('\\', '/')).replace('\\ ', '\\s+')
         rgx += '\\s*$'
 
-        if self.debug_level >= 5: print "REGEX: " + regex
+        if self.options.debug_level >= 5: print "REGEX: " + rgx
         rgx = re.compile(rgx)
 
         # Search for this process among the running processes
@@ -147,7 +157,7 @@ class Process:
 
             cmdline = cmdline.replace('\\', '/')
 
-            if self.debug_level >= 5: print "CMDLINE: " + cmdline
+            if self.options.debug_level >= 5: print "CMDLINE: " + cmdline
             if rgx.match(cmdline):
                 return False
 
@@ -161,7 +171,10 @@ class Process:
         if self.workdir == None:
             self.workdir = os.path.dirname(self.exefile)
 
-        proc = subprocess.Popen('"' + self.exefile + '" ' + self.args, cwd = self.workdir, shell = self.useShell)
+        cmdline = ('"' + self.exefile + '" ' + self.args).strip()
+        if self.options.verbose:
+            print "....Executing " + cmdline
+        proc = subprocess.Popen(cmdline, cwd = self.workdir, shell = self.useShell)
 
         if self.waitDone:
             print "....Waiting for the command to complete"
