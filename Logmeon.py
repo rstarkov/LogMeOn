@@ -1,10 +1,10 @@
 # Logmeon.py
 # Copyright (C) 2008 Roman Starkov
 #
-# $Id: //depot/users/rs/Logmeon/Logmeon.py#3 $
-# $DateTime: 2008/08/14 20:22:04 $
+# $Id: //depot/users/rs/Logmeon/Logmeon.py#4 $
+# $DateTime: 2008/08/16 08:34:01 $
 
-import sys
+import sys, os, re
 import subprocess
 from optparse import OptionParser
 
@@ -80,7 +80,6 @@ class Subst:
 
     #-----------------------------------------------------------------------------
     def NeedsExecuting(self):
-        import os
         return not os.path.isdir(self.drive + ":\\")
 
     #-----------------------------------------------------------------------------
@@ -101,13 +100,11 @@ class DeleteFile:
 
     #-----------------------------------------------------------------------------
     def NeedsExecuting(self):
-        import os
         return os.path.isfile(self.filename)
 
     #-----------------------------------------------------------------------------
     def Execute(self):
         print("Deleting file " + self.filename)
-        import os
         os.remove(self.filename)
         sleep(self.wait)
 
@@ -117,53 +114,38 @@ class DeleteFile:
 class Process:
 
     #-----------------------------------------------------------------------------
-    def __init__(self, nicename, cmd, wait=0.0, useShell=False, exactMatch=False, waitDone=False):
-        self.nicename = nicename # Used for information only
-        self.cmd = cmd  # Must be a string with the command and all arguments to it.
-                        # This same string is used for searching for running processes.
-        self.useShell = useShell      # if True, command will be executed within the shell
-        self.exactMatch = exactMatch  # unless True, fuzzy matching of the command against
-                                      # running processes will be used.
-        self.wait = wait          # seconds to wait after fire-and-forget start
-        self.waitDone = waitDone  # if True, will wait for the process to terminate.
+    def __init__(self, nicename, exefile, args="", workdir=None, wait=0.0, useShell=False, waitDone=False):
+        self.nicename = nicename   # Used for information only
+        self.exefile = exefile
+        self.args = args           # Must be None or a single string with all arguments.
+        self.workdir = workdir
+        self.wait = wait           # seconds to wait after fire-and-forget start
+        self.useShell = useShell   # if True, command will be executed within the shell
+        self.waitDone = waitDone   # if True, will wait for the process to terminate.
         self.debug_level = 0
 
     #-----------------------------------------------------------------------------
     def NeedsExecuting(self):
         from win32com.client import GetObject
-        import re
 
         if self.debug_level >= 5: print; print
 
         # Construct the regex used to match running processes
-        if self.exactMatch:
-            rgx = '^' + re.escape(self.cmd) + '$'
-            if self.debug_level >= 5: print "REGEX: " + regex
-            rgx = re.compile(rgx)
-        else:
-            cmd = self.cmd.strip().replace('\\', '/')
-            if cmd[0] == '"':
-                exepos = cmd.find('"', 1)
-                exe = cmd[1:exepos]
-            else:
-                exepos = cmd.find(' ')
-                exe = cmd[cmd[0:exepos].rfind('/')+1 : exepos]
+        rgx = '^["\\s]*' + re.escape(self.exefile.replace('\\', '/')) + '["\\s]*'
+        if self.args != None and len(self.args) > 0:
+            rgx += '\\s+' + re.escape(self.args.replace('\\', '/')).replace('\\ ', '\\s+')
+        rgx += '\\s*$'
 
-            args = re.sub(r'\s+', ' ', cmd[exepos+1:].replace('"', '')).strip()
-            if len(args) > 0:
-                args = '\s+' + re.escape(args).replace('\\ ', '\\s+')
-
-            rgx = '^.*?' + re.escape(exe.strip()) + args + '\s*$'
-            if self.debug_level >= 5: print "REGEX: " + rgx
-            rgx = re.compile(rgx, re.IGNORECASE)
+        if self.debug_level >= 5: print "REGEX: " + regex
+        rgx = re.compile(rgx)
 
         # Search for this process among the running processes
         for proc in GetObject("WinMgMts:").InstancesOf("Win32_Process"):
             cmdline = proc.Properties_("CommandLine").Value
             if cmdline == None:
                 continue
-            if not self.exactMatch:
-                cmdline = cmdline.replace('"', '').replace('\\', '/')
+
+            cmdline = cmdline.replace('\\', '/')
 
             if self.debug_level >= 5: print "CMDLINE: " + cmdline
             if rgx.match(cmdline):
@@ -174,7 +156,13 @@ class Process:
     #-----------------------------------------------------------------------------
     def Execute(self):
         print "Starting %s..." % self.nicename
-        proc = subprocess.Popen(self.cmd, shell = self.useShell)
+        if not os.path.isfile(self.exefile):
+            raise Exception("File not found: " + self.exefile)
+        if self.workdir == None:
+            self.workdir = os.path.dirname(self.exefile)
+
+        proc = subprocess.Popen('"' + self.exefile + '" ' + self.args, cwd = self.workdir, shell = self.useShell)
+
         if self.waitDone:
             print "....Waiting for the command to complete"
             proc.wait()

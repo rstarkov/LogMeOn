@@ -1,12 +1,9 @@
-import sys
-from Logmeon import LogonConfig, Subst, Process
+from Logmeon import LogonConfig, Subst, Process, DeleteFile
 
-cfg = LogonConfig()
+cfg = LogonConfig(initialWait = 20.0)
+cfg.ParseArgs()
 
 cfg.Add(Subst('P', r'I:\Projects', wait=1.0))
-cfg.Add(Process("Process Explorer", r'I:\Root\SysInternals\procexp.exe /t', wait=3.0))
+cfg.Add(Process("Process Explorer", exefile = r"I:\Root\SysInternals\procexp.exe", args = "/t", wait=6.0))
 
-if len(sys.argv) > 1:
-    cfg.Execute(initialWait = 0.0)
-else:
-    cfg.Execute(initialWait = 3.0)
+cfg.Execute()
