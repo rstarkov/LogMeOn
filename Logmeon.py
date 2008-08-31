@@ -1,8 +1,8 @@
 # Logmeon.py  --  a library for writing logon/re-logon scripts.
 # Copyright (C) 2008 Roman Starkov
 #
-# $Id: //depot/users/rs/Logmeon/Logmeon.py#7 $
-# $DateTime: 2008/08/31 14:37:29 $
+# $Id: //depot/users/rs/Logmeon/Logmeon.py#8 $
+# $DateTime: 2008/08/31 14:54:18 $
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -57,9 +57,10 @@ class LogonConfig():
             self.options.verbose = True
 
     #-----------------------------------------------------------------------------
-    def Add(self, item, isExecuteNeeded = lambda item: item.NeedsExecute()):
+    def Add(self, item, wait = 0.0, isExecuteNeeded = lambda item: item.NeedsExecute()):
         self.__items.append(item)
         item.options = self.options
+        item.wait = wait
         item.isExecuteNeeded = isExecuteNeeded
 
     #-----------------------------------------------------------------------------
@@ -74,6 +75,7 @@ class LogonConfig():
             if item.isExecuteNeeded(item):
                 try:
                     item.Execute()
+                    Helpers.Sleep(item.wait)
                 except Exception, e:
                     hadErrors = True
                     print "....ERROR executing action: %s" % str(e)
@@ -98,10 +100,9 @@ class LogonConfig():
 class Subst:
 
     #-----------------------------------------------------------------------------
-    def __init__(self, drive, path, wait=0.0):
+    def __init__(self, drive, path):
         self.path = path
         self.drive = drive
-        self.wait = wait
 
     #-----------------------------------------------------------------------------
     def NeedsExecute(self):
@@ -111,7 +112,6 @@ class Subst:
     def Execute(self):
         print("Substing drive %s: for directory %s" % (self.drive, self.path))
         subprocess.check_call("subst %s: %s" % (self.drive, self.path))
-        Helpers.Sleep(self.wait)
 
 
 
@@ -119,9 +119,8 @@ class Subst:
 class DeleteFile:
 
     #-----------------------------------------------------------------------------
-    def __init__(self, filename, wait=0.0):
+    def __init__(self, filename):
         self.filename = filename
-        self.wait = wait
 
     #-----------------------------------------------------------------------------
     def NeedsExecute(self):
@@ -131,7 +130,6 @@ class DeleteFile:
     def Execute(self):
         print("Deleting file " + self.filename)
         os.remove(self.filename)
-        Helpers.Sleep(self.wait)
 
 
 
@@ -139,12 +137,11 @@ class DeleteFile:
 class Process:
 
     #-----------------------------------------------------------------------------
-    def __init__(self, nicename, exefile, args="", workdir=None, wait=0.0, useShell=False, waitDone=False):
+    def __init__(self, nicename, exefile, args="", workdir=None, useShell=False, waitDone=False):
         self.nicename = nicename   # Used for information only
         self.exefile = exefile
         self.args = args           # Must be None or a single string with all arguments.
         self.workdir = workdir
-        self.wait = wait           # seconds to wait after fire-and-forget start
         self.useShell = useShell   # if True, command will be executed within the shell
         self.waitDone = waitDone   # if True, will wait for the process to terminate.
 
@@ -193,8 +190,6 @@ class Process:
         if self.waitDone:
             print "....Waiting for the command to complete"
             proc.wait()
-        else:
-            Helpers.Sleep(self.wait)
 
 
 
