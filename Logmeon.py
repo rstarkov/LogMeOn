@@ -1,8 +1,8 @@
 # Logmeon.py  --  a library for writing logon/re-logon scripts.
 # Copyright (C) 2008 Roman Starkov
 #
-# $Id: //depot/users/rs/Logmeon/Logmeon.py#6 $
-# $DateTime: 2008/08/18 19:02:00 $
+# $Id: //depot/users/rs/Logmeon/Logmeon.py#7 $
+# $DateTime: 2008/08/31 14:37:29 $
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -57,20 +57,21 @@ class LogonConfig():
             self.options.verbose = True
 
     #-----------------------------------------------------------------------------
-    def Add(self, item):
+    def Add(self, item, isExecuteNeeded = lambda item: item.NeedsExecute()):
         self.__items.append(item)
         item.options = self.options
+        item.isExecuteNeeded = isExecuteNeeded
 
     #-----------------------------------------------------------------------------
     def Execute(self):
         print "Logmeon started."
         if self.options.first_logon:
-            sleep(self.initialWait)
+            Helpers.Sleep(self.initialWait)
         print
 
         hadErrors = False
         for item in self.__items:
-            if item.NeedsExecuting():
+            if item.isExecuteNeeded(item):
                 try:
                     item.Execute()
                 except Exception, e:
@@ -103,14 +104,14 @@ class Subst:
         self.wait = wait
 
     #-----------------------------------------------------------------------------
-    def NeedsExecuting(self):
+    def NeedsExecute(self):
         return not os.path.isdir(self.drive + ":\\")
 
     #-----------------------------------------------------------------------------
     def Execute(self):
         print("Substing drive %s: for directory %s" % (self.drive, self.path))
         subprocess.check_call("subst %s: %s" % (self.drive, self.path))
-        sleep(self.wait)
+        Helpers.Sleep(self.wait)
 
 
 
@@ -123,14 +124,14 @@ class DeleteFile:
         self.wait = wait
 
     #-----------------------------------------------------------------------------
-    def NeedsExecuting(self):
+    def NeedsExecute(self):
         return os.path.isfile(self.filename)
 
     #-----------------------------------------------------------------------------
     def Execute(self):
         print("Deleting file " + self.filename)
         os.remove(self.filename)
-        sleep(self.wait)
+        Helpers.Sleep(self.wait)
 
 
 
@@ -148,7 +149,7 @@ class Process:
         self.waitDone = waitDone   # if True, will wait for the process to terminate.
 
     #-----------------------------------------------------------------------------
-    def NeedsExecuting(self):
+    def NeedsExecute(self):
         from win32com.client import GetObject
 
         if self.options.debug_level >= 5: print; print
@@ -193,15 +194,30 @@ class Process:
             print "....Waiting for the command to complete"
             proc.wait()
         else:
-            sleep(self.wait)
+            Helpers.Sleep(self.wait)
 
 
 
 #-----------------------------------------------------------------------------
-def sleep(seconds):
-    if seconds == 0:
-        return
-    print "....Sleeping for %s seconds" % seconds
-    import time
-    time.sleep(seconds)
+class Helpers:
 
+    #-----------------------------------------------------------------------------
+    @staticmethod
+    def Sleep(seconds):
+        if seconds == 0:
+            return
+        print "....Sleeping for %s seconds" % seconds
+        import time
+        time.sleep(seconds)
+
+    #-----------------------------------------------------------------------------
+    @staticmethod
+    def MutexExists(mutexName):
+        from win32event import OpenMutex, ReleaseMutex
+        from pywintypes import error as PyWinTypesError
+        try:
+            mutex = OpenMutex(1048576, False, mutexName)
+            ReleaseMutex(mutex)
+            return True
+        except PyWinTypesError:
+            return False
