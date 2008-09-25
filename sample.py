@@ -1,10 +1,10 @@
 from Logmeon import LogonConfig, Subst, Process, DeleteFile, Helpers
 
-cfg = LogonConfig(initialWait = 10.0)
+cfg = LogonConfig()
 cfg.ParseArgs()
 
-cfg.Add(wait = 1.0, item = Subst('P', r'I:\Projects'))
-cfg.Add(wait = 3.0, item = Process("Process Explorer", exefile = r"I:\Root\SysInternals\procexp.exe", args = "/t"))
-cfg.Add(wait = 1.0, item = Process("TClockEx", exefile = r"I:\Temp\TClockEx\tclockex.exe"), isExecuteNeeded = lambda x: not Helpers.MutexExists("TClockExDllInstalled"))
+cfg.Add(item = Subst('P', r'I:\Projects'))
+cfg.Add(item = Process("Process Explorer", exe = r"I:\Root\SysInternals\procexp.exe", args = "/t"))
+cfg.Add(item = Process("TClockEx", exe = r"I:\Temp\TClockEx\tclockex.exe"), is_execute_needed = lambda x: not Helpers.MutexExists("TClockExDllInstalled"))
 
 cfg.Execute()

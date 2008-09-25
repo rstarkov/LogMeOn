@@ -1,8 +1,8 @@
 # Logmeon.py  --  a library for writing logon/re-logon scripts.
 # Copyright (C) 2008 Roman Starkov
 #
-# $Id: //depot/users/rs/Logmeon/Logmeon.py#8 $
-# $DateTime: 2008/08/31 14:54:18 $
+# $Id: //depot/users/rs/Logmeon/Logmeon.py#9 $
+# $DateTime: 2008/09/25 18:52:31 $
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,10 +25,11 @@ from optparse import OptionParser, OptionGroup
 class LogonConfig():
 
     #-----------------------------------------------------------------------------
-    def __init__(self, initialWait = 0.0):
+    def __init__(self):
         self.__items = []
         self.parser = None
-        self.initialWait = initialWait
+        self.default_wait_first = 2
+        self.default_wait_next = 0
 
     #-----------------------------------------------------------------------------
     def ConstructCmdlineParser(self):
@@ -37,11 +38,11 @@ class LogonConfig():
         self.parser.add_option('-f', '--first-logon',     action="store_true", default=False, help="If set, the script will know it's performing the initial logon")
         self.parser.add_option('-c', '--close-when-done', action="store_true", default=False, help="If set, the script will not wait for user to press Enter upon completion")
 
-        debugGroup = OptionGroup(self.parser, "Debugging options")
-        debugGroup.add_option ('-v', '--verbose',         action="store_true", default=False, help="Enables the printing of extra info")
-        debugGroup.add_option ('-d', '--debug-level',     type="int",          default=0,     help="Enables debug mode LEVEL. Any value above 0 also implies --verbose.", metavar="LEVEL")
+        debug_group = OptionGroup(self.parser, "Debugging options")
+        debug_group.add_option ('-v', '--verbose',         action="store_true", default=False, help="Enables the printing of extra info")
+        debug_group.add_option ('-d', '--debug-level',     type="int",          default=0,     help="Enables debug mode LEVEL. Any value above 0 also implies --verbose.", metavar="LEVEL")
 
-        self.parser.add_option_group(debugGroup)
+        self.parser.add_option_group(debug_group)
 
     #-----------------------------------------------------------------------------
     def ParseArgs(self):
@@ -57,22 +58,25 @@ class LogonConfig():
             self.options.verbose = True
 
     #-----------------------------------------------------------------------------
-    def Add(self, item, wait = 0.0, isExecuteNeeded = lambda item: item.NeedsExecute()):
+    def Add(self, item, wait_first = None, wait_next = None, is_execute_needed = lambda item: item.NeedsExecute()):
         self.__items.append(item)
         item.options = self.options
-        item.wait = wait
-        item.isExecuteNeeded = isExecuteNeeded
+        if self.options.first_logon:
+            if wait_first == None: item.wait = self.default_wait_first
+            else:                  item.wait = wait_first
+        else:
+            if wait_next  == None: item.wait = self.default_wait_next
+            else:                  item.wait = wait_next
+        item.is_execute_needed = is_execute_needed
 
     #-----------------------------------------------------------------------------
     def Execute(self):
         print "Logmeon started."
-        if self.options.first_logon:
-            Helpers.Sleep(self.initialWait)
         print
 
         hadErrors = False
         for item in self.__items:
-            if item.isExecuteNeeded(item):
+            if item.is_execute_needed(item):
                 try:
                     item.Execute()
                     Helpers.Sleep(item.wait)
@@ -93,6 +97,19 @@ class LogonConfig():
         if hadErrors or not self.options.close_when_done:
             print
             raw_input("Press Enter to exit")
+
+
+
+#-----------------------------------------------------------------------------
+class Nothing:
+
+    #-----------------------------------------------------------------------------
+    def NeedsExecute(self):
+        return False
+
+    #-----------------------------------------------------------------------------
+    def Execute(self):
+        pass
 
 
 
@@ -137,13 +154,13 @@ class DeleteFile:
 class Process:
 
     #-----------------------------------------------------------------------------
-    def __init__(self, nicename, exefile, args="", workdir=None, useShell=False, waitDone=False):
-        self.nicename = nicename   # Used for information only
-        self.exefile = exefile
-        self.args = args           # Must be None or a single string with all arguments.
-        self.workdir = workdir
-        self.useShell = useShell   # if True, command will be executed within the shell
-        self.waitDone = waitDone   # if True, will wait for the process to terminate.
+    def __init__(self, nicename, exe, args="", work_dir=None, use_shell=False, wait_done=False):
+        self.nicename = nicename     # Used for information only
+        self.exe = exe
+        self.args = args             # Must be None or a single string with all arguments.
+        self.work_dir = work_dir
+        self.use_shell = use_shell   # if True, command will be executed within the shell
+        self.wait_done = wait_done   # if True, will wait for the process to terminate.
 
     #-----------------------------------------------------------------------------
     def NeedsExecute(self):
@@ -152,7 +169,7 @@ class Process:
         if self.options.debug_level >= 5: print; print
 
         # Construct the regex used to match running processes
-        rgx = '^["\\s]*' + re.escape(self.exefile.replace('\\', '/')) + '["\\s]*'
+        rgx = '^["\\s]*' + re.escape(self.exe.replace('\\', '/')) + '["\\s]*'
         if self.args != None and len(self.args) > 0:
             rgx += '\\s+' + re.escape(self.args.replace('\\', '/')).replace('\\ ', '\\s+')
         rgx += '\\s*$'
@@ -177,17 +194,17 @@ class Process:
     #-----------------------------------------------------------------------------
     def Execute(self):
         print "Starting %s..." % self.nicename
-        if not os.path.isfile(self.exefile):
-            raise Exception("File not found: " + self.exefile)
-        if self.workdir == None:
-            self.workdir = os.path.dirname(self.exefile)
+        if not os.path.isfile(self.exe):
+            raise Exception("File not found: " + self.exe)
+        if self.work_dir == None:
+            self.work_dir = os.path.dirname(self.exe)
 
-        cmdline = ('"' + self.exefile + '" ' + self.args).strip()
+        cmdline = ('"' + self.exe + '" ' + self.args).strip()
         if self.options.verbose:
             print "....Executing " + cmdline
-        proc = subprocess.Popen(cmdline, cwd = self.workdir, shell = self.useShell)
+        proc = subprocess.Popen(cmdline, cwd = self.work_dir, shell = self.use_shell)
 
-        if self.waitDone:
+        if self.wait_done:
             print "....Waiting for the command to complete"
             proc.wait()
 
