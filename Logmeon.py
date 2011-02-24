@@ -1,8 +1,8 @@
 # Logmeon.py  --  a library for writing logon/re-logon scripts.
 # Copyright (C) 2008 Roman Starkov
 #
-# $Id: //depot/main/python/2.6/Logmeon.py#2 $
-# $DateTime: 2011/02/24 00:21:49 $
+# $Id: //depot/main/python/2.6/Logmeon.py#3 $
+# $DateTime: 2011/02/24 00:24:03 $
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -234,7 +234,6 @@ class Process:
             if options.debug_level >= 5: print "CMDLINE: " + cmdline
             if rgx.match(cmdline):
                 # Huge hack to expose the priority class properly (http://stackoverflow.com/questions/5078570)
-                print "Handle: " + proc.Handle
                 proc.__dict__['Win32Handle'] = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, False, int(proc.Handle))
                 proc.__dict__['PriorityClass'] = win32process.GetPriorityClass(proc.Win32Handle)
                 yield proc
