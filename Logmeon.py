@@ -58,6 +58,7 @@ class LogonConfig():
 
         global options
         options, parameters = self.parser.parse_args()
+        self.options = options
 
         if len(parameters) > 0:
             self.parser.error("Unexpected positional arguments supplied. This script doesn't take any.")
@@ -89,11 +90,15 @@ class LogonConfig():
         win32api.CloseHandle(hToken)
 
         hadErrors = False
+        first = True
         for item in self.__items:
             if item.is_execute_needed(item):
+                if first:
+                    first = False
+                else:
+                    Helpers.Sleep(item.wait)
                 try:
                     item.Execute()
-                    Helpers.Sleep(item.wait)
                 except Exception, e:
                     hadErrors = True
                     print "....ERROR executing action: %s" % str(e)
@@ -165,6 +170,25 @@ class DeleteFile:
 
 
 #-----------------------------------------------------------------------------
+class Sleep:
+
+    #-----------------------------------------------------------------------------
+    def __init__(self, seconds):
+        self.seconds = seconds
+
+    #-----------------------------------------------------------------------------
+    def NeedsExecute(self):
+        return True
+
+    #-----------------------------------------------------------------------------
+    def Execute(self):
+        print "Sleeping for %s seconds" % self.seconds
+        import time
+        time.sleep(self.seconds)
+
+
+
+#-----------------------------------------------------------------------------
 class Priority:
     Realtime = 0x00000100
     High = 0x00000080
@@ -198,14 +222,16 @@ class Priority:
 class Process:
 
     #-----------------------------------------------------------------------------
-    def __init__(self, nicename, exe, args="", work_dir=None, use_shell=False, wait_done=False, priority=Priority.Normal):
+    def __init__(self, nicename, exe, args="", work_dir=None, use_shell=False, wait_done=False, mutex=None, priority=Priority.Normal, cmdline_regex=None):
         self.nicename = nicename     # Used for information only
         self.exe = exe
         self.args = args             # Must be None or a single string with all arguments.
         self.work_dir = work_dir
         self.use_shell = use_shell   # if True, command will be executed within the shell
         self.wait_done = wait_done   # if True, will wait for the process to terminate.
+        self.mutex = mutex
         self.priority = priority
+        self.cmdline_regex = cmdline_regex
 
     #-----------------------------------------------------------------------------
     def Instances(self):
@@ -215,10 +241,13 @@ class Process:
         if options.debug_level >= 5: print; print
 
         # Construct the regex used to match running processes
-        rgx = '^["\\s]*' + re.escape(self.exe.replace('\\', '/')) + '["\\s]*'
-        if self.args != None and len(self.args) > 0:
-            rgx += '\\s+' + re.escape(self.args.replace('\\', '/')).replace('\\ ', '\\s+')
-        rgx += '\\s*$'
+        if self.cmdline_regex is None:
+            rgx = '^["\\s]*' + re.escape(self.exe.replace('\\', '/')) + '["\\s]*'
+            if self.args != None and len(self.args) > 0:
+                rgx += '\\s+' + re.escape(self.args.replace('\\', '/')).replace('\\ ', '\\s+')
+            rgx += '\\s*$'
+        else:
+            rgx = self.cmdline_regex
 
         if options.debug_level >= 5: print "REGEX: " + rgx
         rgx = re.compile(rgx)
@@ -233,6 +262,7 @@ class Process:
 
             if options.debug_level >= 5: print "CMDLINE: " + cmdline
             if rgx.match(cmdline):
+                if options.debug_level >= 5: print "MATCH!"
                 # Huge hack to expose the priority class properly (http://stackoverflow.com/questions/5078570)
                 proc.__dict__['Win32Handle'] = win32api.OpenProcess(win32con.PROCESS_ALL_ACCESS, False, int(proc.Handle))
                 proc.__dict__['PriorityClass'] = win32process.GetPriorityClass(proc.Win32Handle)
@@ -240,7 +270,10 @@ class Process:
 
     #-----------------------------------------------------------------------------
     def NeedsExecute(self):
-        return not any(self.Instances())
+        if self.mutex == None:
+            return not any(self.Instances())
+        else:
+            return not Helpers.MutexExists(self.mutex)
 
     #-----------------------------------------------------------------------------
     def Execute(self):
@@ -280,7 +313,8 @@ class Helpers:
         from pywintypes import error as PyWinTypesError
         try:
             mutex = OpenMutex(1048576, False, mutexName)
-            ReleaseMutex(mutex)
-            return True
-        except PyWinTypesError:
+        except:
             return False
+        try: ReleaseMutex(mutex)
+        except: pass
+        return True;
