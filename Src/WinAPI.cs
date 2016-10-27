@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
@@ -131,6 +132,20 @@ namespace LogMeOn
                     throw new Win32Exception();
 
                 return prevPriv.PrivilegeCount == 0 ? enable /* didn't make a change */ : ((prevPriv.Privileges[0].Attributes & SE_PRIVILEGE_ENABLED) != 0);
+            }
+        }
+
+        public static ProcessPriorityClass PriorityToClass(Priority priority)
+        {
+            switch (priority)
+            {
+                case Priority.Idle: return ProcessPriorityClass.Idle;
+                case Priority.BelowNormal: return ProcessPriorityClass.BelowNormal;
+                case Priority.Normal: return ProcessPriorityClass.Normal;
+                case Priority.AboveNormal: return ProcessPriorityClass.AboveNormal;
+                case Priority.High: return ProcessPriorityClass.High;
+                case Priority.RealTime: return ProcessPriorityClass.RealTime;
+                default: throw new Exception("Unrecognized priority");
             }
         }
 

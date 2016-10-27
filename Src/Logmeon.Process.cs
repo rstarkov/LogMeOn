@@ -101,23 +101,12 @@ namespace LogMeOn
 
             public Process Priority(Priority priority)
             {
-                System.Diagnostics.ProcessPriorityClass priorityClass;
-                switch (priority)
-                {
-                    case LogMeOn.Priority.Idle: priorityClass = System.Diagnostics.ProcessPriorityClass.Idle; break;
-                    case LogMeOn.Priority.BelowNormal: priorityClass = System.Diagnostics.ProcessPriorityClass.BelowNormal; break;
-                    case LogMeOn.Priority.Normal: priorityClass = System.Diagnostics.ProcessPriorityClass.Normal; break;
-                    case LogMeOn.Priority.AboveNormal: priorityClass = System.Diagnostics.ProcessPriorityClass.AboveNormal; break;
-                    case LogMeOn.Priority.High: priorityClass = System.Diagnostics.ProcessPriorityClass.High; break;
-                    case LogMeOn.Priority.RealTime: priorityClass = System.Diagnostics.ProcessPriorityClass.RealTime; break;
-                    default: throw new Exception("Unrecognized priority");
-                }
                 foreach (var p in find())
                 {
                     if (p.Priority != priority)
                     {
                         WriteLineColored($"{{green}}{Name}{{}}: priority of process {{cyan}}ID {p.ProcessId}{{}} changed from {{yellow}}{p.Priority}{{}} to {{yellow}}{priority}{{}}.");
-                        LogAndSuppressException(() => { System.Diagnostics.Process.GetProcessById((int) p.ProcessId).PriorityClass = priorityClass; });
+                        LogAndSuppressException(() => { System.Diagnostics.Process.GetProcessById((int) p.ProcessId).PriorityClass = WinAPI.PriorityToClass(priority); });
                     }
                 }
                 return this;
