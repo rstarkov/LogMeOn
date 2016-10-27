@@ -61,11 +61,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
   <Target Name="AfterBuild">
+    <Exec Condition=" '$(Configuration)' == 'Release' " Command="..\packages\ILRepack.2.0.12\tools\ILRepack.exe /out:$(OutputPath)\..\Logmeon.exe $(OutputPath)\Logmeon.exe $(OutputPath)\CSScriptLibrary.dll $(OutputPath)\Mono.CSharp.dll $(OutputPath)\RT.Util.dll" />
   </Target>
-  -->
 </Project>
