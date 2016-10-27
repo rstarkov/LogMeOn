@@ -21,6 +21,7 @@ namespace LogMeOn
             {
                 Name = name;
                 Args = args;
+                _waitBeforeAction = Logmeon.WaitBeforeAction;
             }
 
             private List<ProcessInfo> find()

@@ -44,6 +44,50 @@ namespace LogMeOn
         }
     }
 
+    public class ServiceInfo
+    {
+        private ManagementObject _service;
+
+        public uint ProcessId { get { return (uint) _service["ProcessId"]; } }
+        public string Name { get { return (string) _service["Name"]; } }
+        public string DisplayName { get { return (string) _service["DisplayName"]; } }
+        public string Caption { get { return (string) _service["Caption"]; } }
+        public bool AcceptPause { get { return (bool) _service["AcceptPause"]; } }
+        public bool AcceptStop { get { return (bool) _service["AcceptStop"]; } }
+        public bool DelayedAutoStart { get { return (bool) _service["DelayedAutoStart"]; } }
+        public bool Started { get { return (bool) _service["Started"]; } }
+
+        public ServiceInfo(ManagementBaseObject service)
+        {
+            _service = (ManagementObject) service;
+        }
+
+        public override string ToString()
+        {
+            return $"[{ProcessId}] {Name} ({DisplayName}) - {Caption}";
+        }
+
+        public static List<ServiceInfo> GetServices()
+        {
+            var results = new List<ServiceInfo>();
+            using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_Service"))
+            using (var matches = searcher.Get())
+                foreach (var match in matches)
+                    results.Add(new ServiceInfo(match));
+            return results;
+        }
+
+        public void StartService()
+        {
+            _service.InvokeMethod("StartService", new object[0]);
+        }
+
+        public void StopService()
+        {
+            _service.InvokeMethod("StopService", new object[0]);
+        }
+    }
+
     public enum Priority
     {
         Idle = 4,

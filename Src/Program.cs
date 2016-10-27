@@ -16,6 +16,7 @@ namespace LogMeOn
             Console.OutputEncoding = Encoding.UTF8;
 
             var scriptFile = PathUtil.AppPathCombine($"Logmeon-{Environment.MachineName.ToLower()}.cs");
+            Logmeon.WriteLineColored($"Logmeon v{Ut.VersionOfExe()}");
             Logmeon.WriteLineColored($"Executing Logmeon script: {{yellow}}{scriptFile}{{}}");
             Logmeon.WriteLineColored("");
 

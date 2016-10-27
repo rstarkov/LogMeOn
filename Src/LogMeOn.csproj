@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Logmeon.cs" />
+    <Compile Include="Logmeon.Service.cs" />
     <Compile Include="Logmeon.Process.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
