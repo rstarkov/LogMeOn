@@ -15,6 +15,8 @@ namespace LogMeOn
             public string Name { get; private set; }
             public string[] Args { get; private set; }
 
+            private TimeSpan _waitBeforeAction;
+
             public Process(string name, params string[] args)
             {
                 Name = name;
@@ -36,6 +38,12 @@ namespace LogMeOn
                 var commands = WinAPI.CommandLineToArgs(commandLine);
                 // first parameter is case-insensitive; the rest are case-sensitive
                 return args.Zip(commands, (a, c) => new { a, c }).Select((p, i) => i == 0 ? p.a.EqualsNoCase(p.c) : (p.a == p.c)).All(x => x);
+            }
+
+            public Process WaitBeforeAction(TimeSpan time)
+            {
+                _waitBeforeAction = time;
+                return this;
             }
 
             public Process Running(bool shouldBeRunning)
@@ -65,8 +73,8 @@ namespace LogMeOn
                     WriteLineColored($"{{green}}{Name}{{}}: {{red}}file not found: {{}}{{yellow}}{Args[0]}{{}}");
                     return this;
                 }
-                WriteColored($"{{green}}{Name}{{}}: starting process in {WaitBeforeAction.TotalSeconds:0} seconds... ");
-                Thread.Sleep(WaitBeforeAction);
+                WriteColored($"{{green}}{Name}{{}}: starting process in {_waitBeforeAction.TotalSeconds:0} seconds... ");
+                Thread.Sleep(_waitBeforeAction);
                 WriteLineColored($"done.");
                 var runner = new CommandRunner();
                 runner.SetCommand(Args);

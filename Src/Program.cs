@@ -14,15 +14,22 @@ namespace LogMeOn
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
+
             var scriptFile = PathUtil.AppPathCombine($"Logmeon-{Environment.MachineName.ToLower()}.cs");
             Logmeon.WriteLineColored($"Executing Logmeon script: {{yellow}}{scriptFile}{{}}");
+            Logmeon.WriteLineColored("");
+
             if (!File.Exists(scriptFile))
             {
                 Logmeon.WriteLineColored($"{{red}}ERROR:{{}} script file not found: {{yellow}}{scriptFile}{{}}");
                 return;
             }
+
+            // Load the script
             var code = File.ReadAllText(scriptFile);
             code = "using System; using System.Collections.Generic; namespace LogMeOn { public class LogMeOnScript : ILogmeonScript {" + code + "} }";
+
+            // Compile the script
             ILogmeonScript script;
             try
             {
@@ -39,6 +46,7 @@ namespace LogMeOn
                 return;
             }
 
+            // Execute the script
             try
             {
                 script.Main(args);
