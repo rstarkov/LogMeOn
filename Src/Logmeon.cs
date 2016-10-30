@@ -12,7 +12,7 @@ namespace LogMeOn
         /// <summary>
         ///     Specifies a default value for the amount of time to wait before performing certain actions (allowing the user
         ///     to Ctrl+C the script if desired). Actions using this value are <see cref="Process.Run"/> , <see
-        ///     cref="Process.Running"/> , <see cref="Service.Running"/>. Defaults to zero.</summary>
+        ///     cref="Process.SetRunning"/> , <see cref="Service.SetRunning"/>. Defaults to zero.</summary>
         public static TimeSpan WaitBeforeAction { get; set; } = TimeSpan.Zero;
 
         /// <summary>
@@ -21,7 +21,7 @@ namespace LogMeOn
         public static TimeSpan WaitForProcessShutdown { get; set; } = TimeSpan.FromSeconds(7);
 
         /// <summary>
-        ///     Specifies how long <see cref="Service.Running"/> will wait before concluding that service did not stop in time
+        ///     Specifies how long <see cref="Service.SetRunning"/> will wait before concluding that service did not stop in time
         ///     and concluding that shutdown failed. Defaults to 7 seconds.</summary>
         public static TimeSpan WaitForServiceShutdown { get; set; } = TimeSpan.FromSeconds(7);
 

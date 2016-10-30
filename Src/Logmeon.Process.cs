@@ -67,7 +67,7 @@ namespace LogMeOn
             ///     Ensures the process is in the desired state - running or stopped. Does nothing if the process is already
             ///     in the desired state; otherwise calls <see cref="Run"/> or <see cref="Kill"/> as required. See
             ///     documentation for these two methods as well as <see cref="IsRunning"/> for the exact semantics. Chainable.</summary>
-            public Process Running(bool shouldBeRunning)
+            public Process SetRunning(bool shouldBeRunning)
             {
                 if (IsRunning != shouldBeRunning)
                 {
@@ -92,7 +92,7 @@ namespace LogMeOn
 
             /// <summary>
             ///     Starts a new instance of this process unconditionally (regardless of whether one is already running). See
-            ///     also <see cref="Running"/>. Verifies that the executable exists and logs an error if not. Pauses for a
+            ///     also <see cref="SetRunning"/>. Verifies that the executable exists and logs an error if not. Pauses for a
             ///     configurable interval before starting the process to allow the script to be interrupted if desired (see
             ///     <see cref="WaitBeforeAction"/>). To verify that the process didn't exit a few seconds later, see <see
             ///     cref="Logmeon.CheckStarted"/>. Chainable.</summary>

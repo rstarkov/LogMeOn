@@ -55,7 +55,7 @@ namespace LogMeOn
             ///     an error if it doesn't (see <see cref="Logmeon.WaitForServiceShutdown"/>). If the service needs to be
             ///     started, starts the service and returns immediately; use <see cref="Logmeon.CheckStarted"/> to confirm
             ///     that the service didn't exit immediately after starting. Chainable.</summary>
-            public Service Running(bool shouldBeRunning)
+            public Service SetRunning(bool shouldBeRunning)
             {
                 if (IsRunning != shouldBeRunning)
                 {
