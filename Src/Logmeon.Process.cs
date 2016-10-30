@@ -10,13 +10,28 @@ namespace LogMeOn
 {
     partial class Logmeon
     {
+        /// <summary>Controls a process.</summary>
         public class Process
         {
+            /// <summary>Gets the friendly name of the service as used for logging purposes only.</summary>
             public string Name { get; private set; }
+            /// <summary>
+            ///     Gets the command line associated with the process as used for starting and locating running instances of
+            ///     the process.</summary>
             public string[] Args { get; private set; }
 
             private TimeSpan _waitBeforeAction;
 
+            /// <summary>
+            ///     Creates a process controller for the specified process. Does not perform any actions whatsoever; does not
+            ///     check the validity of the arguments or the existence of the specified process / executable file.</summary>
+            /// <param name="name">
+            ///     Friendly name for this process to be used for logging purposes.</param>
+            /// <param name="args">
+            ///     Command line arguments associated with this process. If the process is to be started, this is the command
+            ///     line executed. If running instances need to be found, they are identified by the command line - not just
+            ///     the name of the executable but also the arguments. Note that all arguments other than the first one
+            ///     (executable name) are case-sensitive. You must use full paths for this class to operate correctly.</param>
             public Process(string name, params string[] args)
             {
                 Name = name;
@@ -41,12 +56,17 @@ namespace LogMeOn
                 return args.Zip(commands, (a, c) => new { a, c }).Select((p, i) => i == 0 ? p.a.EqualsNoCase(p.c) : (p.a == p.c)).All(x => x);
             }
 
+            /// <summary>Overrides <see cref="Logmeon.WaitBeforeAction"/> for this specific service only. Chainable.</summary>
             public Process WaitBeforeAction(TimeSpan time)
             {
                 _waitBeforeAction = time;
                 return this;
             }
 
+            /// <summary>
+            ///     Ensures the process is in the desired state - running or stopped. Does nothing if the process is already
+            ///     in the desired state; otherwise calls <see cref="Run"/> or <see cref="Kill"/> as required. See
+            ///     documentation for these two methods as well as <see cref="IsRunning"/> for the exact semantics. Chainable.</summary>
             public Process Running(bool shouldBeRunning)
             {
                 if (IsRunning != shouldBeRunning)
@@ -59,6 +79,9 @@ namespace LogMeOn
                 return this;
             }
 
+            /// <summary>
+            ///     Returns true if at least one instance of this process is running, with the exact same executable name
+            ///     (case-insensitive) and command line arguments (case-sensitive); false otherwise.</summary>
             public bool IsRunning
             {
                 get
@@ -67,6 +90,12 @@ namespace LogMeOn
                 }
             }
 
+            /// <summary>
+            ///     Starts a new instance of this process unconditionally (regardless of whether one is already running). See
+            ///     also <see cref="Running"/>. Verifies that the executable exists and logs an error if not. Pauses for a
+            ///     configurable interval before starting the process to allow the script to be interrupted if desired (see
+            ///     <see cref="WaitBeforeAction"/>). To verify that the process didn't exit a few seconds later, see <see
+            ///     cref="Logmeon.CheckStarted"/>. Chainable.</summary>
             public Process Run()
             {
                 if (!File.Exists(Args[0]))
@@ -86,6 +115,12 @@ namespace LogMeOn
                 return this;
             }
 
+            /// <summary>
+            ///     Kills all running instances of this process (matching by <see cref="Args"/> as documented in <see
+            ///     cref="IsRunning"/>). For each running instance found, also kills all child processes. For each process to
+            ///     be killed, this method first attempts a graceful shutdown, escalating to less graceful shutdowns if the
+            ///     process is still running after a configurable timeout (see <see cref="Logmeon.WaitForProcessShutdown"/>).
+            ///     Logs a failure if any of the processes could not be verified as terminated. Chainable.</summary>
             public Process Kill()
             {
                 var processes = ProcessInfo.GetProcesses().ToDictionary(p => p.ProcessId);
@@ -122,6 +157,10 @@ namespace LogMeOn
                     kill(name, child.ProcessId, processes);
             }
 
+            /// <summary>
+            ///     Sets the priority of all running instances of this process (matching by <see cref="Args"/> as documented
+            ///     in <see cref="IsRunning"/>). Does not (currently) set the priority of child processes. Does not
+            ///     (currently) check that the change took effect. Chainable.</summary>
             public Process Priority(Priority priority)
             {
                 foreach (var p in find())

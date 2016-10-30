@@ -9,21 +9,41 @@ namespace LogMeOn
 {
     public static partial class Logmeon
     {
+        /// <summary>
+        ///     Specifies a default value for the amount of time to wait before performing certain actions (allowing the user
+        ///     to Ctrl+C the script if desired). Actions using this value are <see cref="Process.Run"/> , <see
+        ///     cref="Process.Running"/> , <see cref="Service.Running"/>. Defaults to zero.</summary>
         public static TimeSpan WaitBeforeAction { get; set; } = TimeSpan.Zero;
+
+        /// <summary>
+        ///     Specifies how long <see cref="Process.Kill"/> will wait before concluding that process did not shut down in
+        ///     time and attempting a more brute-force method (or concluding that shutdown failed). Defaults to 7 seconds.</summary>
         public static TimeSpan WaitForProcessShutdown { get; set; } = TimeSpan.FromSeconds(7);
+
+        /// <summary>
+        ///     Specifies how long <see cref="Service.Running"/> will wait before concluding that service did not stop in time
+        ///     and concluding that shutdown failed. Defaults to 7 seconds.</summary>
         public static TimeSpan WaitForServiceShutdown { get; set; } = TimeSpan.FromSeconds(7);
+
+        /// <summary>
+        ///     This value is initially false. Any time any sort of failure occurs (e.g. process would not shut down;
+        ///     executable not found etc), this value is set to true. It is not consumed directly by Logmeon, and is intended
+        ///     to be looked at by the user script.</summary>
         public static bool AnyFailures { get; set; } = false;
 
-        public static void Initialise()
-        {
-            WinAPI.ModifyPrivilege(PrivilegeName.SeDebugPrivilege, true);
-        }
-
+        /// <summary>
+        ///     Outputs text to the console, parsing and colorizing where required. For syntax, see
+        ///     https://docs.timwi.de/M:RT.Util.CommandLine.CommandLineParser.Colorize(RT.Util.RhoElement) and
+        ///     https://docs.timwi.de/T:RT.Util.RhoML. Example: "Normal text {red}Red text{} normal text."</summary>
         public static void WriteColored(string str)
         {
             ConsoleUtil.Write(CommandLineParser.Colorize(RhoML.Parse(str)));
         }
 
+        /// <summary>
+        ///     Outputs text to the console, parsing and colorizing where required. For syntax, see
+        ///     https://docs.timwi.de/M:RT.Util.CommandLine.CommandLineParser.Colorize(RT.Util.RhoElement) and
+        ///     https://docs.timwi.de/T:RT.Util.RhoML. Example: "Normal text {red}Red text{} normal text."</summary>
         public static void WriteLineColored(string str)
         {
             ConsoleUtil.WriteLine(CommandLineParser.Colorize(RhoML.Parse(str)));
@@ -35,7 +55,9 @@ namespace LogMeOn
         /// <summary>
         ///     Verifies that all processes and services that were started during this run of the script have actually started
         ///     and are still running. This is a separate step to make it possible for the calling script to pause before
-        ///     checking, to confirm that a process/service did not just start and then exit a few seconds later.</summary>
+        ///     checking, to confirm that a process/service did not just start and then exit a few seconds later. Every time
+        ///     <see cref="Process"/> or <see cref="Service"/> starts a process or a service, it is automatically enrolled for
+        ///     this check, but the check itself is optional.</summary>
         public static void CheckStarted()
         {
             foreach (var process in _startedProcesses)
