@@ -8,6 +8,8 @@ namespace LogMeOn
     public static partial class Logmeon
     {
         public static TimeSpan WaitBeforeAction { get; set; } = TimeSpan.Zero;
+        public static TimeSpan WaitProcessShutdown { get; set; } = TimeSpan.FromSeconds(7);
+        public static bool AnyFailures { get; set; } = false;
 
         public static void Initialise()
         {
@@ -32,7 +34,9 @@ namespace LogMeOn
             }
             catch (Exception e)
             {
+                WriteLineColored("");
                 WriteLineColored($"{{red}}ERROR: {e.Message} ({e.GetType().Name}){{}}");
+                Logmeon.AnyFailures = true;
             }
         }
     }

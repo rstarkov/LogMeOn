@@ -72,6 +72,7 @@ namespace LogMeOn
                 if (!File.Exists(Args[0]))
                 {
                     WriteLineColored($"{{green}}{Name}{{}}: {{red}}file not found: {{}}{{yellow}}{Args[0]}{{}}");
+                    Logmeon.AnyFailures = true;
                     return this;
                 }
                 WriteColored($"{{green}}{Name}{{}}: starting process in {_waitBeforeAction.TotalSeconds:0} seconds... ");
@@ -93,10 +94,42 @@ namespace LogMeOn
 
             private void kill(string name, uint processId, Dictionary<uint, ProcessInfo> processes)
             {
-                WriteLineColored($"{{green}}{name}{{}}: process {{cyan}}ID {processId}{{}} killed.");
-                LogAndSuppressException(() => { System.Diagnostics.Process.GetProcessById((int) processId).Kill(); });
+                WriteColored($"{{green}}{name}{{}}: shutting down process {{cyan}}ID {processId}{{}} nicely... ");
+                WinAPI.SendMessageToTopLevelWindows(processId, true, 0x0010 /* WM_CLOSE */, IntPtr.Zero, IntPtr.Zero);
+                bool success = true;
+                if (!waitProcessDead(processId))
+                {
+                    WriteColored($"less nicely... ");
+                    WinAPI.SendMessageToTopLevelWindows(12052, false, 0x0012 /* WM_QUIT */, IntPtr.Zero, IntPtr.Zero);
+                    if (!waitProcessDead(processId))
+                    {
+                        WriteColored($"killing... ");
+                        LogAndSuppressException(() => { System.Diagnostics.Process.GetProcessById((int) processId).Kill(); });
+                        if (!waitProcessDead(processId))
+                        {
+                            WriteLineColored($"{{red}}failed.{{}}");
+                            success = false;
+                            Logmeon.AnyFailures = true;
+                        }
+                    }
+                }
+                if (success)
+                    WriteLineColored($"{{red}}done.{{}}");
+
                 foreach (var child in processes.Values.Where(p => p.ParentProcessId == processId))
                     kill(name, child.ProcessId, processes);
+            }
+
+            private bool waitProcessDead(uint processId)
+            {
+                var start = DateTime.UtcNow;
+                while (DateTime.UtcNow < start + Logmeon.WaitProcessShutdown)
+                {
+                    if (ProcessInfo.GetProcess(processId) == null)
+                        return true;
+                    Thread.Sleep(150);
+                }
+                return false;
             }
 
             public Process Priority(Priority priority)

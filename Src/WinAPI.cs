@@ -43,6 +43,15 @@ namespace LogMeOn
                     results.Add(new ProcessInfo(match));
             return results;
         }
+
+        public static ProcessInfo GetProcess(uint processId)
+        {
+            using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_Process WHERE ProcessId = {processId}"))
+            using (var matches = searcher.Get())
+                foreach (var match in matches)
+                    return new ProcessInfo(match);
+            return null;
+        }
     }
 
     public class ServiceInfo
@@ -207,6 +216,42 @@ namespace LogMeOn
             {
                 Marshal.FreeHGlobal(argv);
             }
+        }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool PostThreadMessage(uint threadId, uint msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        static extern IntPtr SendMessage(IntPtr hWnd, UInt32 Msg, IntPtr wParam, IntPtr lParam);
+
+        public static List<IntPtr> SendMessageToTopLevelWindows(uint processId, bool sendNotPost, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            var results = new List<IntPtr>();
+            EnumWindows((IntPtr wnd, IntPtr _) =>
+            {
+                uint pid;
+                uint threadId = GetWindowThreadProcessId(wnd, out pid);
+                if (pid == processId)
+                {
+                    if (sendNotPost)
+                        SendMessage(wnd, msg, wParam, lParam);
+                    else
+                        PostThreadMessage(threadId, msg, wParam, lParam);
+                    results.Add(wnd);
+                }
+                return true;
+            }, IntPtr.Zero);
+            return results;
         }
     }
 

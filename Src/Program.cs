@@ -14,6 +14,7 @@ namespace LogMeOn
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
+            Logmeon.Initialise();
 
             var scriptFile = PathUtil.AppPathCombine($"Logmeon-{Environment.MachineName.ToLower()}.cs");
             Logmeon.WriteLineColored($"Logmeon v{Ut.VersionOfExe()}");
@@ -28,7 +29,7 @@ namespace LogMeOn
 
             // Load the script
             var code = File.ReadAllText(scriptFile);
-            code = "using System; using System.Collections.Generic; namespace LogMeOn { public class LogMeOnScript : ILogmeonScript {" + code + "} }";
+            code = "using System; using System.Collections.Generic; using System.Threading; namespace LogMeOn { public class LogMeOnScript : ILogmeonScript {" + code + "} }";
 
             // Compile the script
             ILogmeonScript script;
