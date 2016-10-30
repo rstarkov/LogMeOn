@@ -25,7 +25,10 @@ namespace LogMeOn
             {
                 var result = ServiceInfo.GetServices().FirstOrDefault(si => si.Name == ServiceName);
                 if (result == null)
+                {
                     WriteLineColored($"{{green}}{Name}{{}}: service named {{aqua}}{ServiceName}{{}} not found.");
+                    Logmeon.AnyFailures = true;
+                }
                 return result;
             }
 
@@ -59,15 +62,24 @@ namespace LogMeOn
             {
                 WriteColored($"{{green}}{Name}{{}}: starting service in {_waitBeforeAction.TotalSeconds:0} seconds... ");
                 Thread.Sleep(_waitBeforeAction);
-                WriteLineColored($"done.");
+                WriteColored($"starting... ");
                 find().StartService();
+                WriteLineColored($"done.");
+                _startedServices.Add(this);
                 return this;
             }
 
             public Service Stop()
             {
-                WriteLineColored($"{{green}}{Name}{{}}: service stopped.");
+                WriteColored($"{{green}}{Name}{{}}: stopping service... ");
                 find().StopService();
+                if (!WaitFor(() => !IsRunning, Logmeon.WaitForServiceShutdown))
+                {
+                    WriteLineColored($"{{red}}service failed to stop.{{}}");
+                    Logmeon.AnyFailures = true;
+                }
+                else
+                    WriteLineColored($"{{green}}done.{{}}");
                 return this;
             }
 
