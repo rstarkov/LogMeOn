@@ -74,15 +74,24 @@ namespace LogMeOn
             public Service Priority(Priority priority)
             {
                 var service = find();
-                var process = ProcessInfo.GetProcesses().FirstOrDefault(p => p.ProcessId == service.ProcessId);
+                if (!service.Started)
+                    return this;
+                var process = ProcessInfo.GetProcess(service.ProcessId);
                 if (process == null)
                 {
                     WriteLineColored($"{{green}}{Name}{{}}: {{red}}process {{cyan}}ID {service.ProcessId}{{}} not found.{{}}");
+                    Logmeon.AnyFailures = true;
                 }
                 else if (process.Priority != priority)
                 {
                     WriteLineColored($"{{green}}{Name}{{}}: priority of service process {{cyan}}ID {process.ProcessId}{{}} changed from {{yellow}}{process.Priority}{{}} to {{yellow}}{priority}{{}}.");
                     LogAndSuppressException(() => { System.Diagnostics.Process.GetProcessById((int) service.ProcessId).PriorityClass = WinAPI.PriorityToClass(priority); });
+                    process = ProcessInfo.GetProcess(service.ProcessId);
+                    if (process.Priority != priority)
+                    {
+                        WriteLineColored($"{{red}}Priority change failed.{{}}");
+                        Logmeon.AnyFailures = true;
+                    }
                 }
                 return this;
             }
