@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using csscript;
 using CSScriptLibrary;
@@ -17,7 +18,8 @@ namespace LogMeOn
             WinAPI.ModifyPrivilege(PrivilegeName.SeDebugPrivilege, true);
 
             var scriptFile = PathUtil.AppPathCombine($"Logmeon-{Environment.MachineName.ToLower()}.cs");
-            Logmeon.WriteLineColored($"Logmeon v{Ut.VersionOfExe()}");
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            Logmeon.WriteLineColored($"Logmeon v{version.Major}.{version.Minor:000}");
             Logmeon.WriteLineColored($"Executing Logmeon script: {{yellow}}{scriptFile}{{}}");
             Logmeon.WriteLineColored("");
 
