@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using RT.Util;
 using RT.Util.ExtensionMethods;
@@ -21,10 +24,12 @@ namespace LogMeOn
             public string[] Args { get; private set; }
 
             private TimeSpan _waitBeforeAction;
+            private bool _elevated;
 
             /// <summary>
             ///     Creates a process controller for the specified process. Does not perform any actions whatsoever; does not
-            ///     check the validity of the arguments or the existence of the specified process / executable file.</summary>
+            ///     check the validity of the arguments or the existence of the specified process / executable file. By
+            ///     default the process is started non-elevated; see <see cref="Elevated"/>.</summary>
             /// <param name="name">
             ///     Friendly name for this process to be used for logging purposes.</param>
             /// <param name="args">
@@ -60,6 +65,15 @@ namespace LogMeOn
             public Process WaitBeforeAction(TimeSpan time)
             {
                 _waitBeforeAction = time;
+                return this;
+            }
+
+            /// <summary>
+            ///     Configures this process to start elevated. By default new processes are started un-elevated (or, more
+            ///     precisely, with the same elevation status as the user's desktop shell).</summary>
+            public Process Elevated()
+            {
+                _elevated = true;
                 return this;
             }
 
@@ -106,11 +120,72 @@ namespace LogMeOn
                 }
                 WriteColored($"{{green}}{Name}{{}}: starting process in {_waitBeforeAction.TotalSeconds:0} seconds... ");
                 Thread.Sleep(_waitBeforeAction);
-                WriteColored($"starting... ");
-                var runner = new CommandRunner();
-                runner.SetCommand(Args);
-                runner.Start();
-                WriteLineColored($"done.");
+
+                int processId;
+                try
+                {
+                    var hToken = IntPtr.Zero;
+                    var pi = new WinAPI.PROCESS_INFORMATION();
+                    var hShellProcess = IntPtr.Zero;
+                    var hShellToken = IntPtr.Zero;
+                    try
+                    {
+                        var si = new WinAPI.STARTUPINFO();
+                        si.cb = Marshal.SizeOf(si);
+                        var processAttributes = new WinAPI.SECURITY_ATTRIBUTES();
+                        var threadAttributes = new WinAPI.SECURITY_ATTRIBUTES();
+
+                        if (_elevated)
+                        {
+                            WriteColored($"starting elevated... ");
+                            if (!WinAPI.CreateProcess(Args[0], CommandRunner.ArgsToCommandLine(Args.Skip(1)), ref processAttributes, ref threadAttributes, false, 0, IntPtr.Zero, null, ref si, out pi))
+                                throw new Win32Exception();
+                        }
+                        else
+                        {
+                            WriteColored($"starting... ");
+                            var shellWnd = WinAPI.GetShellWindow();
+                            if (shellWnd == IntPtr.Zero)
+                                throw new Exception("Could not find shell window");
+
+                            uint shellProcessId;
+                            WinAPI.GetWindowThreadProcessId(shellWnd, out shellProcessId);
+
+                            hShellProcess = WinAPI.OpenProcess(0x00000400 /* QueryInformation */, false, shellProcessId);
+
+                            if (!WinAPI.OpenProcessToken(hShellProcess, 2 /* TOKEN_DUPLICATE */, out hShellToken))
+                                throw new Win32Exception();
+
+                            uint tokenAccess = 8 /*TOKEN_QUERY*/ | 1 /*TOKEN_ASSIGN_PRIMARY*/ | 2 /*TOKEN_DUPLICATE*/ | 0x80 /*TOKEN_ADJUST_DEFAULT*/ | 0x100 /*TOKEN_ADJUST_SESSIONID*/;
+                            WinAPI.DuplicateTokenEx(hShellToken, tokenAccess, IntPtr.Zero, 2 /* SecurityImpersonation */, 1 /* TokenPrimary */, out hToken);
+
+                            if (!WinAPI.CreateProcessWithTokenW(hToken, 0, Args[0], CommandRunner.ArgsToCommandLine(Args.Skip(1)), 0, IntPtr.Zero, null, ref si, out pi))
+                                throw new Win32Exception();
+                        }
+                        processId = pi.dwProcessId;
+                    }
+                    finally
+                    {
+                        if (hToken != IntPtr.Zero && !WinAPI.CloseHandle(hToken))
+                            throw new Win32Exception();
+                        if (hShellToken != IntPtr.Zero && !WinAPI.CloseHandle(hShellToken))
+                            throw new Win32Exception();
+                        if (hShellProcess != IntPtr.Zero && !WinAPI.CloseHandle(hShellProcess))
+                            throw new Win32Exception();
+                        if (pi.hProcess != IntPtr.Zero && !WinAPI.CloseHandle(pi.hProcess))
+                            throw new Win32Exception();
+                        if (pi.hThread != IntPtr.Zero && !WinAPI.CloseHandle(pi.hThread))
+                            throw new Win32Exception();
+                    }
+                }
+                catch (Exception e)
+                {
+                    WriteLineColored($"{{green}}{Name}{{}}: {{red}}ERROR while starting process: {e.Message}{{}}");
+                    AnyFailures = true;
+                    return this;
+                }
+
+                WriteLineColored($"done, ID={processId}.");
                 _startedProcesses.Add(this);
                 return this;
             }

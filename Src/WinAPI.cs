@@ -225,7 +225,7 @@ namespace LogMeOn
         delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
 
         [DllImport("user32.dll", SetLastError = true)]
-        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("user32.dll", SetLastError = true)]
@@ -253,6 +253,94 @@ namespace LogMeOn
             }, IntPtr.Zero);
             return results;
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SECURITY_ATTRIBUTES
+        {
+            public int nLength;
+            public IntPtr lpSecurityDescriptor;
+            public int bInheritHandle;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct STARTUPINFO
+        {
+            public Int32 cb;
+            public string lpReserved;
+            public string lpDesktop;
+            public string lpTitle;
+            public Int32 dwX;
+            public Int32 dwY;
+            public Int32 dwXSize;
+            public Int32 dwYSize;
+            public Int32 dwXCountChars;
+            public Int32 dwYCountChars;
+            public Int32 dwFillAttribute;
+            public Int32 dwFlags;
+            public Int16 wShowWindow;
+            public Int16 cbReserved2;
+            public IntPtr lpReserved2;
+            public IntPtr hStdInput;
+            public IntPtr hStdOutput;
+            public IntPtr hStdError;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_INFORMATION
+        {
+            public IntPtr hProcess;
+            public IntPtr hThread;
+            public int dwProcessId;
+            public int dwThreadId;
+        }
+
+        [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool CreateProcessWithTokenW(
+            IntPtr hToken,
+            int dwLogonFlags,
+            string lpApplicationName,
+            string lpCommandLine,
+            int dwCreationFlags,
+            IntPtr lpEnvironment,
+            string lpCurrentDirectory,
+            [In] ref STARTUPINFO lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern bool CreateProcess(
+           string lpApplicationName,
+           string lpCommandLine,
+           ref SECURITY_ATTRIBUTES lpProcessAttributes,
+           ref SECURITY_ATTRIBUTES lpThreadAttributes,
+           bool bInheritHandles,
+           uint dwCreationFlags,
+           IntPtr lpEnvironment,
+           string lpCurrentDirectory,
+           [In] ref STARTUPINFO lpStartupInfo,
+           out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetShellWindow();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, uint processId);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool OpenProcessToken(IntPtr ProcessHandle, UInt32 DesiredAccess, out IntPtr TokenHandle);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public extern static bool DuplicateTokenEx(
+            IntPtr hExistingToken,
+            uint dwDesiredAccess,
+            IntPtr lpTokenAttributes,
+            int ImpersonationLevel,
+            int TokenType,
+            out IntPtr phNewToken);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool CloseHandle(IntPtr hObject);
     }
 
     enum PrivilegeName

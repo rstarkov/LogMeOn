@@ -29,6 +29,9 @@
     <Optimize>true</Optimize>
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="CSScriptLibrary, Version=3.16.0.0, Culture=neutral, PublicKeyToken=70fcc3d18c749033, processorArchitecture=MSIL">
       <HintPath>..\packages\CS-Script.bin.3.16.0.0\lib\net45\CSScriptLibrary.dll</HintPath>
@@ -59,6 +62,7 @@
     <Compile Include="WinAPI.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.manifest" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

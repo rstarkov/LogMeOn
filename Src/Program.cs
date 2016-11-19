@@ -15,7 +15,6 @@ namespace LogMeOn
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
-            WinAPI.ModifyPrivilege(PrivilegeName.SeDebugPrivilege, true);
 
             var scriptFile = PathUtil.AppPathCombine($"Logmeon-{Environment.MachineName.ToLower()}.cs");
             var version = Assembly.GetExecutingAssembly().GetName().Version;
