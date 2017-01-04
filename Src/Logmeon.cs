@@ -4,6 +4,7 @@ using System.Threading;
 using RT.Util;
 using RT.Util.CommandLine;
 using RT.Util.Consoles;
+using RT.Util.ExtensionMethods;
 
 namespace LogMeOn
 {
@@ -21,8 +22,8 @@ namespace LogMeOn
         public static TimeSpan WaitForProcessShutdown { get; set; } = TimeSpan.FromSeconds(7);
 
         /// <summary>
-        ///     Specifies how long <see cref="Service.SetRunning"/> will wait before concluding that service did not stop in time
-        ///     and concluding that shutdown failed. Defaults to 7 seconds.</summary>
+        ///     Specifies how long <see cref="Service.SetRunning"/> will wait before concluding that service did not stop in
+        ///     time and concluding that shutdown failed. Defaults to 7 seconds.</summary>
         public static TimeSpan WaitForServiceShutdown { get; set; } = TimeSpan.FromSeconds(7);
 
         /// <summary>
@@ -72,6 +73,23 @@ namespace LogMeOn
                     WriteLineColored($"{{green}}{service.Name}{{}}: {{red}}service did not start, or started and then stopped.{{}}");
                     Logmeon.AnyFailures = true;
                 }
+        }
+
+        /// <summary>
+        ///     Waits until the specified date/time, logging a message to this effect. Does not wait nor logs anything if the
+        ///     time is null or in the past.</summary>
+        public static void WaitUntil(DateTime? date)
+        {
+            if (date == null)
+                return;
+            if (date.Value.Kind == DateTimeKind.Unspecified)
+                throw new ArgumentException($"{nameof(WaitUntil)} requires a local or a UTC time; time passed in was of an unspecified type.", nameof(date));
+            var dt = date.Value.ToUniversalTime();
+            if (dt < DateTime.UtcNow)
+                return;
+            WriteLineColored($"Sleeping for {(dt - DateTime.UtcNow).TotalSeconds:0.0} seconds...");
+            while (DateTime.UtcNow < dt)
+                Thread.Sleep(TimeSpan.FromSeconds((dt - DateTime.UtcNow).TotalSeconds.Clip(0, 10)));
         }
 
         private static void LogAndSuppressException(Action action)
