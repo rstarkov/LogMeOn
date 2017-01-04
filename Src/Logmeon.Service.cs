@@ -15,6 +15,18 @@ namespace LogMeOn
             /// <summary>Gets the Windows name of the service as used for locating the service.</summary>
             public string ServiceName { get; private set; }
 
+            /// <summary>
+            ///     Gets the time at which <see cref="SetRunning"/> started the service. Null if it has never been started. Do
+            ///     not confuse with the start time of any underlying OS process or service; this property relates only to the
+            ///     Logmeon concept.</summary>
+            public DateTime? StartedAt { get; private set; } = null;
+
+            /// <summary>
+            ///     Gets the time at which <see cref="SetRunning"/> successfully stopped the service. Null if it has never
+            ///     been stopped or didn't succeed. Do not confuse with the end time of any underlying OS process or service;
+            ///     this property relates only to the Logmeon concept.</summary>
+            public DateTime? StoppedAt { get; private set; } = null;
+
             private TimeSpan _waitBeforeAction;
 
             /// <summary>
@@ -84,6 +96,7 @@ namespace LogMeOn
                 Thread.Sleep(_waitBeforeAction);
                 WriteColored($"starting... ");
                 find().StartService();
+                StartedAt = DateTime.UtcNow;
                 WriteLineColored($"done.");
                 _startedServices.Add(this);
             }
@@ -98,7 +111,10 @@ namespace LogMeOn
                     Logmeon.AnyFailures = true;
                 }
                 else
+                {
+                    StoppedAt = DateTime.UtcNow;
                     WriteLineColored($"{{green}}done.{{}}");
+                }
             }
 
             /// <summary>

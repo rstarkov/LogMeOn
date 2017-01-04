@@ -22,6 +22,18 @@ namespace LogMeOn
             ///     the process.</summary>
             public string[] Args { get; private set; }
 
+            /// <summary>
+            ///     Gets the time at which <see cref="Run"/> was invoked and completed without errors. Null if it has never
+            ///     completed successfully on the current instance. Do not confuse with the start time of the underlying OS
+            ///     process; this property relates only to the Logmeon concept.</summary>
+            public DateTime? StartedAt { get; private set; } = null;
+
+            /// <summary>
+            ///     Gets the time at which <see cref="Kill"/> was invoked. Null if it has never been invoked on the current
+            ///     instance. Do not confuse with the end time of any underlying OS process; this property relates only to the
+            ///     Logmeon concept.</summary>
+            public DateTime? KilledAt { get; private set; } = null;
+
             private TimeSpan _waitBeforeAction;
             private bool _elevated;
             private string[] _startCommand;
@@ -197,6 +209,7 @@ namespace LogMeOn
 
                 WriteLineColored($"done, ID={processId}.");
                 _startedProcesses.Add(this);
+                StartedAt = DateTime.UtcNow;
                 return this;
             }
 
@@ -211,6 +224,7 @@ namespace LogMeOn
                 var processes = ProcessInfo.GetProcesses().ToDictionary(p => p.ProcessId);
                 foreach (var p in find())
                     kill(p.Name, p.ProcessId, processes);
+                KilledAt = DateTime.UtcNow;
                 return this;
             }
 
