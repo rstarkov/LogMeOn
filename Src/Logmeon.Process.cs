@@ -24,6 +24,7 @@ namespace LogMeOn
 
             private TimeSpan _waitBeforeAction;
             private bool _elevated;
+            private string[] _startCommand;
 
             /// <summary>
             ///     Creates a process controller for the specified process. Does not perform any actions whatsoever; does not
@@ -77,6 +78,15 @@ namespace LogMeOn
             }
 
             /// <summary>
+            ///     Configures this process to start by running a different program, such as a launcher. If specified, the
+            ///     main process command is used only to detect whether the process is running.</summary>
+            public Process WithStartCommand(params string[] args)
+            {
+                _startCommand = args;
+                return this;
+            }
+
+            /// <summary>
             ///     Ensures the process is in the desired state - running or stopped. Does nothing if the process is already
             ///     in the desired state; otherwise calls <see cref="Run"/> or <see cref="Kill"/> as required. See
             ///     documentation for these two methods as well as <see cref="IsRunning"/> for the exact semantics. Chainable.</summary>
@@ -111,9 +121,10 @@ namespace LogMeOn
             ///     cref="Logmeon.CheckStarted"/>. Chainable.</summary>
             public Process Run()
             {
-                if (!File.Exists(Args[0]))
+                var args = _startCommand ?? Args;
+                if (!File.Exists(args[0]))
                 {
-                    WriteLineColored($"{{green}}{Name}{{}}: {{red}}file not found: {{}}{{yellow}}{Args[0]}{{}}");
+                    WriteLineColored($"{{green}}{Name}{{}}: {{red}}file not found: {{}}{{yellow}}{args[0]}{{}}");
                     Logmeon.AnyFailures = true;
                     return this;
                 }
@@ -137,7 +148,7 @@ namespace LogMeOn
                         if (_elevated)
                         {
                             WriteColored($"starting elevated... ");
-                            if (!WinAPI.CreateProcess(null, CommandRunner.ArgsToCommandLine(Args), ref processAttributes, ref threadAttributes, false, 0, IntPtr.Zero, null, ref si, out pi))
+                            if (!WinAPI.CreateProcess(null, CommandRunner.ArgsToCommandLine(args), ref processAttributes, ref threadAttributes, false, 0, IntPtr.Zero, null, ref si, out pi))
                                 throw new Win32Exception();
                         }
                         else
@@ -158,7 +169,7 @@ namespace LogMeOn
                             uint tokenAccess = 8 /*TOKEN_QUERY*/ | 1 /*TOKEN_ASSIGN_PRIMARY*/ | 2 /*TOKEN_DUPLICATE*/ | 0x80 /*TOKEN_ADJUST_DEFAULT*/ | 0x100 /*TOKEN_ADJUST_SESSIONID*/;
                             WinAPI.DuplicateTokenEx(hShellToken, tokenAccess, IntPtr.Zero, 2 /* SecurityImpersonation */, 1 /* TokenPrimary */, out hToken);
 
-                            if (!WinAPI.CreateProcessWithTokenW(hToken, 0, null, CommandRunner.ArgsToCommandLine(Args), 0, IntPtr.Zero, null, ref si, out pi))
+                            if (!WinAPI.CreateProcessWithTokenW(hToken, 0, null, CommandRunner.ArgsToCommandLine(args), 0, IntPtr.Zero, null, ref si, out pi))
                                 throw new Win32Exception();
                         }
                         processId = pi.dwProcessId;
