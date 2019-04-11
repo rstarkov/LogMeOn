@@ -48,7 +48,7 @@ namespace LogMeOn
                 var result = ServiceInfo.GetServices().FirstOrDefault(si => si.Name == ServiceName);
                 if (result == null)
                 {
-                    WriteLineColored($"{{green}}{Name}{{}}: service named {{aqua}}{ServiceName}{{}} not found.");
+                    WriteLineColored($"{{green}}{Name}{{}}: {{red}}service not found:{{}} {{yellow}}{ServiceName}{{}} not found.");
                     Logmeon.AnyFailures = true;
                 }
                 return result;
@@ -69,6 +69,8 @@ namespace LogMeOn
             ///     that the service didn't exit immediately after starting. Chainable.</summary>
             public Service SetRunning(bool shouldBeRunning)
             {
+                if (find() == null)
+                    return this;
                 if (IsRunning != shouldBeRunning)
                 {
                     if (shouldBeRunning)
@@ -86,7 +88,7 @@ namespace LogMeOn
             {
                 get
                 {
-                    return find().Started;
+                    return find()?.Started ?? false;
                 }
             }
 
@@ -124,7 +126,7 @@ namespace LogMeOn
             public Service Priority(Priority priority)
             {
                 var service = find();
-                if (!service.Started)
+                if (service == null || !service.Started)
                     return this;
                 var process = ProcessInfo.GetProcess(service.ProcessId);
                 if (process == null)
