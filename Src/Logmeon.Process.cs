@@ -21,6 +21,8 @@ namespace LogMeOn
             ///     Gets the command line associated with the process as used for starting and locating running instances of
             ///     the process.</summary>
             public string[] Args { get; private set; }
+            /// <summary>Gets the working directory for the new process (aka "start in").</summary>
+            public string WorkDir { get; private set; } = null;
 
             /// <summary>
             ///     Gets the time at which <see cref="Run"/> was invoked and completed without errors. Null if it has never
@@ -98,6 +100,13 @@ namespace LogMeOn
                 return this;
             }
 
+            /// <summary>Configures the process to start with the specified directory set as current ("start in").</summary>
+            public Process WithWorkDir(string workDir)
+            {
+                WorkDir = workDir;
+                return this;
+            }
+
             /// <summary>
             ///     Ensures the process is in the desired state - running or stopped. Does nothing if the process is already
             ///     in the desired state; otherwise calls <see cref="Run"/> or <see cref="Kill"/> as required. See
@@ -160,7 +169,7 @@ namespace LogMeOn
                         if (_elevated)
                         {
                             WriteColored($"starting elevated... ");
-                            if (!WinAPI.CreateProcess(null, CommandRunner.ArgsToCommandLine(args), ref processAttributes, ref threadAttributes, false, 0, IntPtr.Zero, null, ref si, out pi))
+                            if (!WinAPI.CreateProcess(null, CommandRunner.ArgsToCommandLine(args), ref processAttributes, ref threadAttributes, false, 0, IntPtr.Zero, WorkDir, ref si, out pi))
                                 throw new Win32Exception();
                         }
                         else
@@ -181,7 +190,7 @@ namespace LogMeOn
                             uint tokenAccess = 8 /*TOKEN_QUERY*/ | 1 /*TOKEN_ASSIGN_PRIMARY*/ | 2 /*TOKEN_DUPLICATE*/ | 0x80 /*TOKEN_ADJUST_DEFAULT*/ | 0x100 /*TOKEN_ADJUST_SESSIONID*/;
                             WinAPI.DuplicateTokenEx(hShellToken, tokenAccess, IntPtr.Zero, 2 /* SecurityImpersonation */, 1 /* TokenPrimary */, out hToken);
 
-                            if (!WinAPI.CreateProcessWithTokenW(hToken, 0, null, CommandRunner.ArgsToCommandLine(args), 0, IntPtr.Zero, null, ref si, out pi))
+                            if (!WinAPI.CreateProcessWithTokenW(hToken, 0, null, CommandRunner.ArgsToCommandLine(args), 0, IntPtr.Zero, WorkDir, ref si, out pi))
                                 throw new Win32Exception();
                         }
                         processId = pi.dwProcessId;
