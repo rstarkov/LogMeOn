@@ -1,6 +1,7 @@
 .vs
+.idea
 Builds
-packages
+bin
 obj
 *.suo
 *.csproj.user

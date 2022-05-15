@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using RT.Util;
-using RT.Util.CommandLine;
+using RT.CommandLine;
 using RT.Util.Consoles;
 using RT.Util.ExtensionMethods;
 
