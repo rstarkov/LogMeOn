@@ -72,7 +72,7 @@ namespace LogMeOn
                     return true;
                 var commands = WinAPI.CommandLineToArgs(commandLine);
                 // first parameter is case-insensitive; the rest are case-sensitive
-                return args.Zip(commands, (a, c) => new { a, c }).Select((p, i) => i == 0 ? p.a.EqualsNoCase(p.c) : (p.a == p.c)).All(x => x);
+                return args.Zip(commands, (a, c) => new { a, c }).Select((p, i) => i == 0 ? p.a.EqualsIgnoreCase(p.c) : (p.a == p.c)).All(x => x);
             }
 
             /// <summary>Overrides <see cref="Logmeon.WaitBeforeAction"/> for this specific service only. Chainable.</summary>
