@@ -41,6 +41,7 @@ partial class Logmeon
         private string[] _startCommand;
         private Func<ProcessInfo, bool> _isThisProcess;
         private TimeSpan _isRunningWait = TimeSpan.Zero;
+        private bool _ignoreStartedAndExited = false;
 
         /// <summary>
         ///     Creates a process controller for the specified process. Does not perform any actions whatsoever; does not
@@ -126,6 +127,12 @@ partial class Logmeon
         public Process WithRunningWait(TimeSpan isRunningWait)
         {
             _isRunningWait = isRunningWait;
+            return this;
+        }
+
+        public Process IgnoreStartedAndExited()
+        {
+            _ignoreStartedAndExited = true;
             return this;
         }
 
@@ -240,7 +247,8 @@ partial class Logmeon
             }
 
             WriteLineColored($"done, ID={processId}.");
-            _startedProcesses.Add(this);
+            if (!_ignoreStartedAndExited)
+                _startedProcesses.Add(this);
             StartedAt = DateTime.UtcNow;
             return this;
         }

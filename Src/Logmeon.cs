@@ -50,8 +50,8 @@ public static partial class Logmeon
         ConsoleUtil.WriteLine(CommandLineParser.Colorize(RhoML.Parse(str)));
     }
 
-    private static List<Process> _startedProcesses = new List<Process>();
-    private static List<Service> _startedServices = new List<Service>();
+    private static List<Process> _startedProcesses = new();
+    private static List<Service> _startedServices = new();
 
     /// <summary>
     ///     Verifies that all processes and services that were started during this run of the script have actually started
