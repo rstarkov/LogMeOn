@@ -7,9 +7,11 @@
     <BaseOutputPath>$(MSBuildThisFileDirectory)Builds\</BaseOutputPath>
     <BaseIntermediateOutputPath>$(BaseOutputPath)obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
 
-    <OutputPath>$(BaseOutputPath)$(Configuration)-$(TargetFramework)$(RuntimeIdentifier)\</OutputPath>
-    <PublishDir>$(BaseOutputPath)$(Configuration)-$(TargetFramework)$(RuntimeIdentifier)-publish\</PublishDir>
-    <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Configuration)-$(TargetFramework)$(RuntimeIdentifier)\</IntermediateOutputPath>
+    <CustomSuffix>-$(TargetFramework)$(RuntimeIdentifier)</CustomSuffix>
+    <CustomSuffix Condition="'$(CustomSuffix)'=='-'"></CustomSuffix>
+    <OutputPath>$(BaseOutputPath)$(Configuration)$(CustomSuffix)\</OutputPath>
+    <PublishDir>$(BaseOutputPath)$(Configuration)$(CustomSuffix)-publish\</PublishDir>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(Configuration)$(CustomSuffix)\</IntermediateOutputPath>
 
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
