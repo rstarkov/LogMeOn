@@ -39,6 +39,8 @@ partial class Logmeon
         private TimeSpan _waitBeforeAction;
         private bool _elevated;
         private string[] _startCommand;
+        private Func<ProcessInfo, bool> _isThisProcess;
+        private TimeSpan _isRunningWait = TimeSpan.Zero;
 
         /// <summary>
         ///     Creates a process controller for the specified process. Does not perform any actions whatsoever; does not
@@ -60,17 +62,25 @@ partial class Logmeon
 
         private List<ProcessInfo> find()
         {
-            return ProcessInfo.GetProcesses().Where(p => equalCommandLine(p.CommandLine, Args)).ToList();
+            while (true)
+            {
+                var list = ProcessInfo.GetProcesses().Where(p => equalCommandLine(p, Args)).ToList();
+                if (StartedAt == null || list.Count > 0 || _isRunningWait <= TimeSpan.Zero || DateTime.UtcNow > StartedAt + _isRunningWait)
+                    return list;
+                Thread.Sleep(500);
+            }
         }
 
-        private static bool equalCommandLine(string commandLine, string[] args)
+        private bool equalCommandLine(ProcessInfo p, string[] args)
         {
-            if (commandLine == null)
+            if (p.CommandLine == null)
                 return false;
+            if (_isThisProcess != null)
+                return _isThisProcess(p);
             var argsLine = CommandRunner.ArgsToCommandLine(args);
-            if (commandLine == argsLine)
+            if (p.CommandLine == argsLine)
                 return true;
-            var commands = WinAPI.CommandLineToArgs(commandLine);
+            var commands = WinAPI.CommandLineToArgs(p.CommandLine);
             // first parameter is case-insensitive; the rest are case-sensitive
             return args.Zip(commands, (a, c) => new { a, c }).Select((p, i) => i == 0 ? p.a.EqualsIgnoreCase(p.c) : (p.a == p.c)).All(x => x);
         }
@@ -104,6 +114,18 @@ partial class Logmeon
         public Process WithWorkDir(string workDir)
         {
             WorkDir = workDir;
+            return this;
+        }
+
+        public Process WithRunningCheck(Func<ProcessInfo, bool> isThisProcess)
+        {
+            _isThisProcess = isThisProcess;
+            return this;
+        }
+
+        public Process WithRunningWait(TimeSpan isRunningWait)
+        {
+            _isRunningWait = isRunningWait;
             return this;
         }
 
@@ -149,7 +171,8 @@ partial class Logmeon
                 Logmeon.AnyFailures = true;
                 return this;
             }
-            WriteColored($"{{green}}{Name}{{}}: starting process in {_waitBeforeAction.TotalSeconds:0} seconds... ");
+            var inXSeconds = _waitBeforeAction.TotalSeconds > 0 ? $" in {_waitBeforeAction.TotalSeconds:0} seconds" : "";
+            WriteColored($"{{green}}{Name}{{}}: starting process{inXSeconds}... ");
             Thread.Sleep(_waitBeforeAction);
 
             int processId;
