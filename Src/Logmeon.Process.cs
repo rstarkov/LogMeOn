@@ -199,7 +199,7 @@ partial class Logmeon
                     if (_elevated)
                     {
                         WriteColored($"starting elevated... ");
-                        if (!WinAPI.CreateProcess(null, CommandRunner.ArgsToCommandLine(args), ref processAttributes, ref threadAttributes, false, 0, IntPtr.Zero, WorkDir, ref si, out pi))
+                        if (!WinAPI.CreateProcess(null, CommandRunner.ArgsToCommandLine(args), ref processAttributes, ref threadAttributes, false, WinAPI.CREATE_NEW_CONSOLE, IntPtr.Zero, WorkDir, ref si, out pi))
                             throw new Win32Exception();
                     }
                     else
@@ -220,7 +220,7 @@ partial class Logmeon
                         uint tokenAccess = 8 /*TOKEN_QUERY*/ | 1 /*TOKEN_ASSIGN_PRIMARY*/ | 2 /*TOKEN_DUPLICATE*/ | 0x80 /*TOKEN_ADJUST_DEFAULT*/ | 0x100 /*TOKEN_ADJUST_SESSIONID*/;
                         WinAPI.DuplicateTokenEx(hShellToken, tokenAccess, IntPtr.Zero, 2 /* SecurityImpersonation */, 1 /* TokenPrimary */, out hToken);
 
-                        if (!WinAPI.CreateProcessWithTokenW(hToken, 0, null, CommandRunner.ArgsToCommandLine(args), 0, IntPtr.Zero, WorkDir, ref si, out pi))
+                        if (!WinAPI.CreateProcessWithTokenW(hToken, 0, null, CommandRunner.ArgsToCommandLine(args), WinAPI.CREATE_NEW_CONSOLE, IntPtr.Zero, WorkDir, ref si, out pi))
                             throw new Win32Exception();
                     }
                     processId = pi.dwProcessId;

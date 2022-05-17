@@ -294,6 +294,8 @@ static class WinAPI
         public int dwThreadId;
     }
 
+    public const int CREATE_NEW_CONSOLE = 0x00000010;
+
     [DllImport("advapi32", SetLastError = true, CharSet = CharSet.Unicode)]
     public static extern bool CreateProcessWithTokenW(
         IntPtr hToken,
