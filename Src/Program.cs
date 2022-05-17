@@ -18,7 +18,7 @@ class Program
 
         var scriptFile = Path.Combine(AppContext.BaseDirectory, $"Logmeon-{Environment.MachineName.ToLower()}.cs");
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        Logmeon.WriteLineColored($"Logmeon v{version.Major}.{version.Minor:000}");
+        Logmeon.WriteLineColored($"Logmeon v{version.Major}.{version.Minor:000} (000000)");
         Logmeon.WriteLineColored($"Executing Logmeon script: {{yellow}}{scriptFile}{{}}");
         Logmeon.WriteLineColored("");
 
