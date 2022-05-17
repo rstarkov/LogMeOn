@@ -12,7 +12,7 @@ before_build:
 - ps: |
     [Environment]::CurrentDirectory = $PWD
     $commitId = [Environment]::GetEnvironmentVariable("APPVEYOR_REPO_COMMIT").Substring(0,6)
-    [System.IO.File]::WriteAllText("Src\Program.cs", [System.IO.File]::ReadAllText("Src\Program.cs").Replace("(000000)",$commitId))
+    [System.IO.File]::WriteAllText("Src\Program.cs", [System.IO.File]::ReadAllText("Src\Program.cs").Replace("(000000)","($commitId)"))
 build_script:
 - cmd: dotnet publish --no-self-contained -c Release -r win-x64 -p:Version=%APPVEYOR_BUILD_VERSION%
 on_success:
